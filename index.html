@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OWC Crew Hub</title>
+<meta name="description" content="THE OW CREW's all-in-one squad app for THE FINALS">
+<meta name="theme-color" content="#111215">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OWC Hub">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Orbitron:wght@700;900&family=Saira+Condensed:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#111215;--panel:#1b1c21;--panel2:#23252b;--line:#2f3138;--text:#ecebe6;--muted:#8e8c86;
+  --gold:#d4a63a;--gold-hi:#ffe08a;--gold-lo:#8f6a1c;--purple:#5b2a86;--purple-hi:#8a4fd0;--silver:#c9ccd1;
+  --light:#7fd4ff;--medium:#b07cff;--heavy:#f0a43a;--onair:#ff3348;--good:#4fd08a;--bad:#ff5a6e;
+  --stencil:"Black Ops One",Impact,sans-serif;--body:"Saira Condensed","Arial Narrow",system-ui,sans-serif;--led:"Orbitron",var(--body);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:120px}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;min-height:100vh;
+  background-image:radial-gradient(ellipse at 50% -10%,rgba(91,42,134,.45),transparent 60%),
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:auto,32px 32px,32px 32px;background-attachment:fixed;
+  padding:0 env(safe-area-inset-right) calc(30px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+a{color:var(--gold-hi)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+input:focus,select:focus{outline:2px solid var(--gold);outline-offset:0}
+.gold{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hidden{display:none!important}
+
+/* header + nav */
+.top{position:sticky;top:0;z-index:40;background:rgba(17,18,21,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.hazard{height:6px;background:repeating-linear-gradient(-45deg,var(--gold) 0 12px,#111215 12px 24px)}
+.bar{display:flex;align-items:center;gap:10px;padding:8px 14px;max-width:1100px;margin:0 auto}
+.bar img{width:44px;height:44px;border-radius:10px;border:1px solid rgba(212,166,58,.4)}
+.bar .t{flex:1;min-width:0}
+.bar h1{font:400 22px var(--stencil);letter-spacing:.04em;line-height:1;white-space:nowrap}
+.onair{display:inline-flex;align-items:center;gap:6px;font:700 10px var(--led);letter-spacing:.18em;color:var(--onair);margin-top:3px}
+.onair i{width:7px;height:7px;border-radius:50%;background:var(--onair);box-shadow:0 0 8px var(--onair);animation:blink 1.2s infinite}
+.onair.off{color:var(--muted)} .onair.off i{background:var(--muted);box-shadow:none;animation:none}
+@keyframes blink{50%{opacity:.25}}
+.iconbtn{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--gold-hi);font-size:18px;flex:none}
+.iconbtn.on{background:var(--gold);color:#111;border-color:var(--gold-hi)}
+nav{display:flex;gap:6px;overflow-x:auto;padding:4px 14px 10px;max-width:1100px;margin:0 auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:8px 13px;
+  font:800 14px var(--body);letter-spacing:.08em;text-transform:uppercase}
+nav button.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#141414;border-color:var(--gold-hi)}
+
+main{max-width:1100px;margin:0 auto;padding:16px 14px 20px}
+section.tab{display:none} section.tab.on{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.wrap{max-width:600px;margin:0 auto}
+h2{font:400 26px var(--stencil);letter-spacing:.03em;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:15px;margin-bottom:12px}
+.label{font:800 12px var(--body);letter-spacing:.24em;color:var(--gold);margin:16px 2px 6px;text-transform:uppercase}
+.label::before{content:"// ";color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.panel.stripe{border-top:0;overflow:hidden;padding-top:0}
+.panel.stripe::before{content:"";display:block;height:6px;margin:0 -14px 12px;background:repeating-linear-gradient(-45deg,var(--gold) 0 10px,#111215 10px 20px)}
+.muted{color:var(--muted)} .small{font-size:13px} .note{color:var(--muted);font-size:13px;line-height:1.45}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;gap:4px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:800 15px var(--body);padding:10px 4px;border-radius:7px;text-transform:uppercase;letter-spacing:.08em}
+.seg button.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#141414}
+.seg button[data-v=Light].on{background:var(--light)} .seg button[data-v=Medium].on{background:var(--medium)} .seg button[data-v=Heavy].on{background:var(--heavy)}
+.toggle{display:flex;align-items:center;gap:8px;font:600 15px var(--body);color:var(--silver);margin:8px 2px}
+.toggle input{accent-color:var(--gold);width:18px;height:18px;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:8px;padding:10px 14px;font:800 14px var(--body);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.btn.gold{background:linear-gradient(180deg,#e9bd4f,var(--gold));color:#15130e;border-color:var(--gold-hi);-webkit-text-fill-color:#15130e}
+.btn.purple{background:var(--purple);border-color:var(--purple-hi)}
+.btn.danger{color:var(--bad);border-color:rgba(255,90,110,.4)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn:disabled{opacity:.45}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.big{width:100%;margin:16px 0;border:2px solid var(--gold-hi);border-radius:10px;background:linear-gradient(180deg,#e9bd4f,var(--gold) 50%,#a87d22);color:#15130e;
+  font:400 28px var(--stencil);letter-spacing:.08em;padding:14px;box-shadow:0 6px 0 #5e4512,0 0 24px rgba(212,166,58,.25);transition:transform .08s}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #5e4512}
+.big:disabled{filter:saturate(.5)}
+.stepper{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;margin-bottom:6px}
+.stepper button{width:50px;height:50px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--gold);font:800 28px var(--body)}
+.stepper button:disabled{opacity:.3}
+.count{flex:1;text-align:center} .count span{display:block;font:400 32px var(--stencil);line-height:1}
+.count small{color:var(--muted);font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase}
+.err{color:var(--gold-hi);font-weight:600;text-align:center;margin:8px 0}
+.pill{display:inline-block;border-radius:5px;padding:2px 7px;font:800 11px var(--body);letter-spacing:.1em;text-transform:uppercase;background:var(--panel2);border:1px solid var(--line)}
+
+/* loadout cards */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px;position:relative}
+.card::before{content:"";display:block;height:6px;background:repeating-linear-gradient(-45deg,var(--gold) 0 10px,#111215 10px 20px)}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:linear-gradient(90deg,rgba(91,42,134,.55),rgba(91,42,134,.08));border-bottom:1px solid var(--line)}
+.who{font:700 11px var(--led);letter-spacing:.2em;color:var(--silver)}
+.cls{font:400 28px var(--stencil);letter-spacing:.04em;text-transform:uppercase;line-height:1.1}
+.r{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line)}
+.r:last-child{border-bottom:0}
+.r .k{width:92px;flex:none;font:800 12px var(--body);letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.r .v{flex:1;font:700 16px var(--led);letter-spacing:.03em}
+.r.rolling .v{color:var(--muted)}
+.lock{flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:7px;width:36px;height:32px;font-size:14px}
+.lock.on{background:var(--gold);border-color:var(--gold-hi);color:#000}
+.grid2{display:grid;grid-template-columns:1fr;gap:0 14px}
+@media(min-width:720px){.grid2{grid-template-columns:1fr 1fr}}
+@media(min-width:1060px){.grid3{grid-template-columns:1fr 1fr 1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:6px;padding:6px 10px;font:600 14px var(--body)}
+.chip.off{background:transparent;color:#55534e;text-decoration:line-through}
+.chip.on{background:var(--gold);color:#111;border-color:var(--gold-hi)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px}
+summary{cursor:pointer;font:800 16px var(--body);letter-spacing:.04em}
+details h4{font:800 12px var(--body);letter-spacing:.2em;margin:14px 0 6px;text-transform:uppercase}
+.code{font:900 18px var(--led);letter-spacing:.08em;color:var(--gold-hi)}
+
+/* report */
+.dz{border:2px dashed var(--gold-lo);border-radius:12px;padding:18px;text-align:center;background:rgba(212,166,58,.05)}
+.dz img{max-width:100%;max-height:260px;border-radius:8px;margin-top:10px}
+.pl{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.pl .top2{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.pl .top2 input{flex:1}
+.pl .top2 select{width:96px;flex:none}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats label{font:800 10px var(--body);letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.stats input{padding:7px 8px;font:700 15px var(--led)}
+.gradeb{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;font:900 18px var(--led);flex:none}
+.g-S{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#111;box-shadow:0 0 14px rgba(255,207,63,.5)}
+.g-A{background:var(--purple-hi);color:#fff} .g-B{background:#3d6fb0;color:#fff} .g-C{background:#4b4d55;color:#fff} .g-D{background:#2a2b30;color:var(--muted)}
+.res{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.res:last-child{border-bottom:0}
+.res .n{flex:1;font-weight:800;font-size:17px}
+.res .s{font:900 18px var(--led);color:var(--gold-hi)}
+.mvp{color:var(--gold-hi)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font:800 11px var(--body);letter-spacing:.14em;color:var(--muted);text-transform:uppercase;text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--line)}
+td.num,th.num{text-align:right;font-family:var(--led);font-size:13px}
+.tablewrap{overflow-x:auto}
+.rank{font:900 15px var(--led);color:var(--gold-hi);width:28px}
+.tier{display:inline-block;min-width:22px;text-align:center;border-radius:4px;font:900 12px var(--led);padding:2px 4px}
+.t-S{background:var(--gold);color:#111} .t-A{background:var(--purple-hi);color:#fff} .t-B{background:#3d6fb0;color:#fff} .t-C{background:#4b4d55;color:#fff}
+
+/* trials */
+.trial{border-left:4px solid var(--gold)}
+.trial .sp{font:800 12px var(--body);letter-spacing:.18em;text-transform:uppercase}
+.trial h3{font:700 19px var(--body);margin:4px 0 8px;line-height:1.2}
+.bucks{font:900 18px var(--led);color:var(--gold-hi)}
+.balance{text-align:center}
+.balance .bucks{font-size:40px;display:block}
+
+/* maps */
+.mapbox{position:relative;border-radius:12px;overflow:hidden;background:#0d0d10;border:1px solid var(--line);touch-action:manipulation}
+.mapbox img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.mapbox.adding{outline:2px dashed var(--gold);cursor:crosshair}
+.pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;pointer-events:auto}
+.pin b{background:rgba(17,18,21,.9);border:1px solid var(--gold);color:var(--gold-hi);font:800 11px var(--body);letter-spacing:.06em;padding:2px 6px;border-radius:5px;white-space:nowrap}
+.pin i{width:12px;height:12px;border-radius:50%;border:2px solid #111;margin-top:2px;background:var(--gold)}
+.pin.objective i{background:var(--onair)} .pin.vault i{background:var(--good)} .pin.cashout i{background:var(--gold-hi)} .pin.spawn i{background:var(--light)} .pin.danger i{background:#ff7a00}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+
+/* badges */
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.badge{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.badge .ic{font-size:34px;display:block;filter:grayscale(1) opacity(.35)}
+.badge b{display:block;font:800 15px var(--body);letter-spacing:.06em;margin-top:4px}
+.badge small{color:var(--muted);font-size:12px}
+.badge.got{border-color:var(--gold);box-shadow:0 0 16px rgba(212,166,58,.18)}
+.badge.got .ic{filter:none}
+
+/* links */
+.links{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.links a{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;color:#fff;font:800 16px var(--body);letter-spacing:.08em;text-transform:uppercase;padding:13px 8px;border-radius:10px;text-align:center}
+.links small{font:600 11px var(--body);letter-spacing:.04em;opacity:.85;text-transform:none;overflow-wrap:anywhere}
+.twitch{background:#7a3ff2;box-shadow:0 4px 0 #4b22a3} .discord{background:#5865f2;box-shadow:0 4px 0 #3640a8}
+
+/* music */
+.player{display:flex;align-items:center;gap:8px}
+.player .now{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.track.on{color:var(--gold-hi)}
+
+/* effects */
+.spot{position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.spot::before,.spot::after{content:"";position:absolute;top:-20%;width:60%;height:90%;
+  background:conic-gradient(from 180deg at 50% 0%,transparent 160deg,rgba(176,124,255,.12) 175deg,rgba(255,224,138,.09) 180deg,rgba(176,124,255,.12) 185deg,transparent 200deg);animation:sweep 8s ease-in-out infinite alternate}
+.spot::before{left:-15%;rotate:-18deg} .spot::after{right:-15%;rotate:18deg;animation-delay:-4s}
+@keyframes sweep{from{rotate:-24deg}to{rotate:10deg}}
+.flash{position:fixed;inset:0;pointer-events:none;z-index:80;background:radial-gradient(circle at 50% 40%,rgba(255,224,138,.35),transparent 60%);opacity:0}
+.flash.go{animation:flashk .7s ease-out} @keyframes flashk{0%{opacity:1}100%{opacity:0}}
+.announce{position:fixed;left:50%;top:40%;z-index:90;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;
+  font:400 min(32px,5.6vw) var(--stencil);letter-spacing:.05em;white-space:nowrap;padding:10px 18px;border:2px solid var(--gold-hi);border-radius:8px;
+  background:linear-gradient(90deg,#3a1a5a,var(--purple),#3a1a5a);color:var(--gold-hi);box-shadow:0 0 40px rgba(138,79,208,.6)}
+.announce.go{animation:ann 1.3s cubic-bezier(.2,1.4,.4,1)}
+@keyframes ann{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%)}}
+.spark{position:fixed;width:7px;height:12px;z-index:85;pointer-events:none;border-radius:2px}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:95;background:var(--panel2);border:1px solid var(--gold);
+  color:var(--text);padding:10px 16px;border-radius:10px;font-weight:700;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;padding:14px}
+.modal .box{background:var(--panel);border:1px solid var(--gold-lo);border-radius:14px;padding:16px;width:100%;max-width:520px;max-height:88vh;overflow:auto}
+@media(min-width:700px){.modal{align-items:center}}
+.cardprev{width:100%;border-radius:10px;border:1px solid var(--line);margin:8px 0}
+.demo{background:rgba(255,51,72,.1);border:1px solid rgba(255,51,72,.4);color:#ffb3bc;border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+footer{color:#5d5b56;font:600 12px var(--body);text-align:center;margin-top:24px;line-height:1.5;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="spot"></div>
+<div class="flash" id="flash"></div>
+<div class="announce" id="announce"></div>
+<div class="toast" id="toast"></div>
+
+<div class="top">
+  <div class="hazard"></div>
+  <div class="bar">
+    <img src="icons/emblem.png" alt="OW Crew emblem">
+    <div class="t">
+      <h1 class="gold">OWC Crew Hub</h1>
+      <div class="onair" id="liveDot"><i></i><span id="liveTxt">ON AIR · ARENA FEED</span></div>
+    </div>
+    <button class="iconbtn" id="musicBtn" title="Music" aria-label="Play or pause music">♫</button>
+  </div>
+  <nav id="nav">
+    <button data-tab="roll" class="on">Roll</button>
+    <button data-tab="report">Report</button>
+    <button data-tab="board">Scoreboard</button>
+    <button data-tab="trials">Trials</button>
+    <button data-tab="intel">Intel</button>
+    <button data-tab="armory">Armory</button>
+    <button data-tab="maps">Maps</button>
+    <button data-tab="badges">Badges</button>
+    <button data-tab="crew">Crew</button>
+  </nav>
+</div>
+
+<main>
+  <div id="demoBanner" class="demo hidden">Demo mode: the app isn't connected to your Google Sheet yet, so everything is saved on this device only. Follow the setup guide to go live for the whole crew.</div>
+
+  <!-- ROLL -->
+  <section class="tab on" id="tab-roll"><div class="wrap" id="rollWrap">
+    <h2 class="gold">Loadout Roulette</h2>
+    <p class="sub">One Team · One Crew · One Goal · Rise Together</p>
+    <div class="label">Show format</div>
+    <div class="seg" id="modeSeg"><button data-v="solo" class="on">Solo</button><button data-v="squad">Squad</button></div>
+    <div id="squadWrap" class="hidden">
+      <div class="label">Squad size</div>
+      <div class="stepper"><button id="minus" aria-label="fewer">−</button>
+        <div class="count"><span id="count" class="gold">3</span><small id="countHint"></small></div>
+        <button id="plus" aria-label="more">+</button></div>
+      <label class="toggle"><input type="checkbox" id="mix"> Balance builds (spread Light / Medium / Heavy evenly)</label>
+    </div>
+    <div id="classWrap">
+      <div class="label">Build</div>
+      <div class="seg" id="classSeg"><button data-v="Any" class="on">Any</button><button data-v="Light">Light</button><button data-v="Medium">Medium</button><button data-v="Heavy">Heavy</button></div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="metaOnly"> Comp Meta only (Season 12 S and A tier gear)</label>
+    <button class="big" id="rollBtn">ENTER THE ARENA</button>
+    <div class="err" id="rollErr"></div>
+    <div id="rollOut"></div>
+    <div id="savedBox"></div>
+    <details><summary>Load a share code</summary>
+      <div style="display:flex;gap:8px;margin-top:10px"><input id="codeIn" placeholder="OWC-M37-0B5" autocapitalize="characters"><button class="btn gold" id="codeLoad">Load</button></div>
+    </details>
+    <details><summary>Armory filter: turn off gear you don't own or won't run</summary><div id="pool"></div>
+      <div class="btns" style="margin-top:12px"><button class="btn" id="allOn">Restore full armory</button></div></details>
+  </div></section>
+
+  <!-- REPORT -->
+  <section class="tab" id="tab-report"><div class="wrap">
+    <h2 class="gold">Match Report</h2>
+    <p class="sub">Upload your end-of-match screenshot. The app reads the stats, you double-check, it grades everyone and crowns the squad MVP.</p>
+    <div class="dz" id="dz">
+      <input type="file" accept="image/*" id="shotIn" class="hidden">
+      <button class="btn gold" id="shotPick">📷 Pick screenshot</button>
+      <div class="note" style="margin-top:8px">or skip it and type the stats in below</div>
+      <img id="shotPrev" class="hidden" alt="screenshot preview">
+      <div class="btns" style="justify-content:center;margin-top:10px"><button class="btn purple hidden" id="shotRead">🔎 Read stats</button></div>
+      <div class="err" id="shotErr"></div>
+    </div>
+    <div class="label">Match info</div>
+    <div class="row2"><select id="rMode"></select><select id="rMap"></select></div>
+    <div class="seg" style="margin-top:8px" id="resSeg"><button data-v="win">Win</button><button data-v="loss" class="on">Loss</button></div>
+    <label class="toggle"><input type="checkbox" id="rRolled"> Our squad played loadouts rolled in this app (+bonus)</label>
+    <div class="label">Players</div>
+    <div id="plList"></div>
+    <div class="btns"><button class="btn" id="addPl">+ Add player</button><button class="btn" id="addMe">+ Add me</button></div>
+    <div class="label">Live grades</div>
+    <div class="panel" id="livePrev"></div>
+    <button class="big" id="submitBtn">SUBMIT REPORT</button>
+    <div class="err" id="subErr"></div>
+    <details><summary>How grading works</summary><div id="howGrade" class="note" style="margin-top:8px"></div></details>
+  </div></section>
+
+  <!-- SCOREBOARD -->
+  <section class="tab" id="tab-board">
+    <h2 class="gold">Scoreboard</h2>
+    <p class="sub" id="boardSub">Season standings</p>
+    <div class="row2" style="max-width:600px"><select id="seasonSel"></select><button class="btn" id="boardRefresh">↻ Refresh</button></div>
+    <div class="seg" style="max-width:600px;margin-top:10px" id="boardSeg"><button data-v="stand" class="on">Standings</button><button data-v="matches">Matches</button><button data-v="archive">Hall of Fame</button></div>
+    <div id="boardOut"></div>
+  </section>
+
+  <!-- TRIALS -->
+  <section class="tab" id="tab-trials"><div class="wrap">
+    <h2 class="gold">Sponsor Trials</h2>
+    <p class="sub" id="trialDate"></p>
+    <div class="panel balance"><div class="label" style="margin-top:0">Your OWC Bucks</div><span class="bucks" id="myBucks">0</span><span class="note" id="meNote"></span></div>
+    <div id="trialList"></div>
+    <p class="note">Honor system: only mark a trial when you actually did it. High Command can see every claim.</p>
+    <div class="label">Rewards</div>
+    <div id="rewardList"></div>
+    <div class="label">Bucks leaderboard</div>
+    <div class="panel" id="bucksBoard"></div>
+    <div class="label">Recent redemptions</div>
+    <div class="panel" id="redeemList"></div>
+  </div></section>
+
+  <!-- INTEL -->
+  <section class="tab" id="tab-intel"><div class="wrap">
+    <h2 class="gold">Intel</h2>
+    <div class="panel stripe" id="seasonCard"></div>
+    <div class="label">Season 12 patch history</div>
+    <div id="patchLog"></div>
+    <div class="label">Latest from Steam <span class="muted">(auto-updates)</span></div>
+    <div id="patchList"><div class="empty">Loading…</div></div>
+    <div class="label">Solo Showdown mini-modes</div>
+    <div class="panel" id="soloModes"></div>
+    <div class="label">Ranked meta</div>
+    <div class="panel" id="metaNotes"></div>
+    <div id="metaTiers"></div>
+    <div class="label">Example meta builds</div>
+    <div id="metaBuilds"></div>
+  </div></section>
+
+  <!-- ARMORY -->
+  <section class="tab" id="tab-armory"><div class="wrap">
+    <h2 class="gold">Armory</h2>
+    <p class="sub">Weapon, gadget and specialization stats.</p>
+    <div class="seg" id="armSeg"><button data-v="Light" class="on">Light</button><button data-v="Medium">Medium</button><button data-v="Heavy">Heavy</button></div>
+    <div id="armOut"></div>
+    <p class="note" id="armNote"></p>
+  </div></section>
+
+  <!-- MAPS -->
+  <section class="tab" id="tab-maps"><div class="wrap">
+    <h2 class="gold">Maps & Callouts</h2>
+    <p class="sub">Tap a map. Add your squad's callouts so everyone uses the same names.</p>
+    <div class="chips" id="mapChips"></div>
+    <div style="margin-top:12px" id="mapView"></div>
+  </div></section>
+
+  <!-- BADGES -->
+  <section class="tab" id="tab-badges"><div class="wrap">
+    <h2 class="gold">Achievements</h2>
+    <p class="sub" id="badgeSub">Earned from your reported matches (all seasons).</p>
+    <div class="panel" id="careerStats"></div>
+    <div class="badges" id="badgeGrid"></div>
+  </div></section>
+
+  <!-- CREW -->
+  <section class="tab" id="tab-crew"><div class="wrap">
+    <h2 class="gold">The OW Crew</h2>
+    <div class="label">Your gamertag</div>
+    <div class="panel">
+      <div style="display:flex;gap:8px"><input id="meIn" placeholder="Exactly as it shows in THE FINALS" maxlength="32"><button class="btn gold" id="meSave">Save</button></div>
+      <p class="note" style="margin-top:8px">Used for your badges, Sponsor Trials and OWC Bucks. Match it to your in-game name.</p>
+    </div>
+    <div class="links">
+      <a class="twitch" href="https://twitch.tv/dwilson7165" target="_blank" rel="noopener">▶ Watch live<small>twitch.tv/dwilson7165</small></a>
+      <a class="discord" href="https://discord.gg/xkMZ3b5Zm" target="_blank" rel="noopener">Join the crew<small>discord.gg/xkMZ3b5Zm</small></a>
+    </div>
+    <div class="label">Game Night</div>
+    <div class="panel stripe"><b style="font-size:18px">OW Crew Community Game Night</b><br><span class="muted">Every Saturday · 7 PM Eastern</span><br><span class="note">Prop Hunt, imposter games and more with partner communities. Watch Discord for the lineup.</span></div>
+    <div class="label">Crew radio</div>
+    <div class="panel"><div class="player"><button class="iconbtn" id="mPrev">⏮</button><button class="iconbtn" id="mPlay">▶</button><button class="iconbtn" id="mNext">⏭</button>
+      <div class="now" id="mNow">No tracks yet</div></div>
+      <label class="toggle"><input type="checkbox" id="mAuto"> Auto-start music when I open the app</label>
+      <input type="range" id="mVol" min="0" max="1" step="0.05" value="0.6" style="margin-top:10px;padding:0">
+      <div id="mList" style="margin-top:6px"></div></div>
+    <div class="label">Install</div>
+    <div class="panel"><button class="btn gold hidden" id="installBtn">⬇ Install the OWC app</button>
+      <p class="note" id="installTip">Android: menu ⋮ > Install app. iPhone: Share > Add to Home Screen. PC: install icon in the Chrome/Edge address bar.</p></div>
+    <div class="label">High Command</div>
+    <div class="panel" id="adminBox"></div>
+    <footer id="foot"></footer>
+  </div></section>
+</main>
+
+<div id="modalRoot"></div>
+<audio id="audio" preload="none"></audio>
+<script src="config.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
