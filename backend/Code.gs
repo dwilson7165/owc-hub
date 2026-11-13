@@ -113,6 +113,7 @@ function route_(action, p) {
       // admin
       adminCheck: function (q) { requireAdmin_(q); return { ok: true }; },
       deleteMatch: deleteMatch_,
+      editPlayers: editPlayers_,
       newSeason: newSeason_,
       uploadMap: uploadMap_,
       deletePin: deletePin_,
@@ -367,6 +368,46 @@ function deleteMatch_(p) {
   if (!r) throw new Error('Match not found.');
   sh.deleteRow(r._row);
   return { deleted: p.id };
+}
+
+/* Admin: clean up the scoreboard.
+   op "remove": take a player out of one match (matchId) or every match this season.
+   op "rename": merge duplicate names (from -> to) in one match or every match this season. */
+function editPlayers_(p) {
+  requireAdmin_(p);
+  var op = String(p.op || ''), name = clean_(p.name, 32), to = clean_(p.to, 32);
+  if (!name) throw new Error('Which player?');
+  if (op === 'rename' && !to) throw new Error('Merge into which name?');
+  if (op !== 'remove' && op !== 'rename') throw new Error('Unknown edit.');
+  var season = p.season || config_().seasonName;
+  var key = String(name).toLowerCase();
+  var sh = sheet_('Matches'), head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var cP = head.indexOf('players') + 1, cM = head.indexOf('mvp') + 1;
+  var list = rows_('Matches').filter(function (r) { return p.matchId ? r.id === p.matchId : (season === '*' || r.season === season); });
+  var changed = 0, emptied = [];
+  list.forEach(function (r) {
+    var pl = []; try { pl = JSON.parse(r.players); } catch (e) { return; }
+    var hit = pl.some(function (x) { return String(x.name).toLowerCase() === key; });
+    if (!hit) return;
+    if (op === 'remove') pl = pl.filter(function (x) { return String(x.name).toLowerCase() !== key; });
+    else {
+      var toKey = to.toLowerCase(), seen = pl.some(function (x) { return String(x.name).toLowerCase() === toKey; });
+      // if both names are in the same match, keep the better line so nobody is counted twice
+      if (seen) {
+        var a = pl.filter(function (x) { return String(x.name).toLowerCase() === key; })[0];
+        var b = pl.filter(function (x) { return String(x.name).toLowerCase() === toKey; })[0];
+        pl = pl.filter(function (x) { var k = String(x.name).toLowerCase(); return k !== key && k !== toKey; });
+        var keep = (a.score || 0) > (b.score || 0) ? a : b; keep.name = to; pl.push(keep);
+      } else pl.forEach(function (x) { if (String(x.name).toLowerCase() === key) x.name = to; });
+    }
+    pl.sort(function (x, y) { return (y.score || 0) - (x.score || 0); });
+    if (!pl.length) { emptied.push(r._row); return; }
+    sh.getRange(r._row, cP).setValue(JSON.stringify(pl));
+    sh.getRange(r._row, cM).setValue(pl[0].name);
+    changed++;
+  });
+  emptied.sort(function (a, b) { return b - a; }).forEach(function (row) { sh.deleteRow(row); });
+  return { changed: changed, removedMatches: emptied.length };
 }
 
 function newSeason_(p) {

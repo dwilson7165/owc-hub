@@ -124,6 +124,21 @@ function mock(action, p) {
       case "uploadMap": { db.maps = db.maps.filter(x => x.name !== p.map); db.maps.push({ name: p.map, image: p.image, credit: p.credit }); save(); return { ok: true, maps: db.maps, pins: db.pins }; }
       case "adminCheck": if (!isAdmin()) throw new Error("Wrong admin PIN. (Demo PIN is 1234)"); return { ok: true };
       case "deleteMatch": db.matches = db.matches.filter(m => m.id !== p.id); save(); return { ok: true };
+      case "editPlayers": {
+        if (!isAdmin()) throw new Error("Wrong admin PIN.");
+        const k = p.name.toLowerCase(), tk = (p.to || "").toLowerCase(); let changed = 0;
+        db.matches.forEach(m => {
+          if (p.matchId ? m.id !== p.matchId : (p.season !== "*" && m.season !== (p.season || db.season))) return;
+          if (!m.players.some(x => x.name.toLowerCase() === k)) return;
+          if (p.op === "remove") m.players = m.players.filter(x => x.name.toLowerCase() !== k);
+          else {
+            const a = m.players.find(x => x.name.toLowerCase() === k), b = m.players.find(x => x.name.toLowerCase() === tk);
+            if (b) { m.players = m.players.filter(x => x !== a && x !== b); const keep = a.score > b.score ? a : b; keep.name = p.to; m.players.push(keep); } else a.name = p.to;
+          }
+          m.players.sort((x, y) => y.score - x.score); if (m.players.length) m.mvp = m.players[0].name; changed++;
+        });
+        db.matches = db.matches.filter(m => m.players.length); save(); return { ok: true, changed };
+      }
       case "newSeason": {
         const ms = db.matches.filter(m => m.season === db.season); const t = {}, mv = {};
         ms.forEach(m => { mv[m.mvp] = (mv[m.mvp] || 0) + 1; m.players.forEach(x => t[x.name] = (t[x.name] || 0) + x.score); });
@@ -477,22 +492,34 @@ function renderBoard() {
   if (view === "stand") {
     const ag = aggregate(b.matches);
     if (!ag.length) { out.innerHTML = `<div class="empty">No matches yet this season. Head to Report after your next game.</div>`; return; }
-    out.innerHTML = `<div class="panel stripe tablewrap"><table><thead><tr><th></th><th>Contestant</th><th class="num">Pts</th><th class="num">Avg</th><th class="num">MVP</th><th class="num">S</th><th class="num">GP</th><th class="num">W</th><th class="num">E</th><th class="num">R</th></tr></thead>
-      <tbody>${ag.map((a, i) => `<tr><td class="rank">${i + 1}</td><td><b>${i === 0 ? "👑 " : ""}${esc(a.name)}</b></td><td class="num">${fmt(a.score)}</td><td class="num">${fmt(a.avg)}</td><td class="num">${a.mvps}</td><td class="num">${a.s}</td><td class="num">${a.n}</td><td class="num">${a.wins}</td><td class="num">${a.elims}</td><td class="num">${a.revives}</td></tr>`).join("")}</tbody></table></div>
+    out.innerHTML = `<div class="panel stripe tablewrap"><table><thead><tr><th></th><th>Contestant</th><th class="num">Pts</th><th class="num">Avg</th><th class="num">MVP</th><th class="num">S</th><th class="num">GP</th><th class="num">W</th><th class="num">E</th><th class="num">R</th>${S.admin ? "<th></th>" : ""}</tr></thead>
+      <tbody>${ag.map((a, i) => `<tr><td class="rank">${i + 1}</td><td><b>${i === 0 ? "👑 " : ""}${esc(a.name)}</b></td><td class="num">${fmt(a.score)}</td><td class="num">${fmt(a.avg)}</td><td class="num">${a.mvps}</td><td class="num">${a.s}</td><td class="num">${a.n}</td><td class="num">${a.wins}</td><td class="num">${a.elims}</td><td class="num">${a.revives}</td>${S.admin ? `<td><button class="btn sm" data-fix="${esc(a.name)}" aria-label="Fix player">⚙</button></td>` : ""}</tr>`).join("")}</tbody></table></div>
+      ${S.admin ? `<div class="panel hidden" id="fixPanel"></div><p class="note">High Command: tap ⚙ to remove a player or merge duplicate names.</p>` : ""}
       ${shareButtons("Share standings")}`;
     wireShare(out, () => ({ kind: "standings", data: { season: b.season, rows: ag.slice(0, 8) } }));
+    $$("[data-fix]", out).forEach(bt => bt.onclick = () => openFix(bt.dataset.fix, ag.map(a => a.name), null));
   } else if (view === "matches") {
     if (!b.matches.length) { out.innerHTML = `<div class="empty">No matches yet.</div>`; return; }
-    out.innerHTML = `<div class="grid2">${b.matches.slice(0, 60).map(m => `<div class="panel">
+    const dups = findDups(b.matches);
+    out.innerHTML = `${S.admin && dups.size ? `<div class="panel" style="border-color:var(--gold)">⚠ ${dups.size} match${dups.size === 1 ? " looks" : "es look"} like duplicate reports. They're marked below; delete the extra copy.</div>` : ""}<div class="grid2">${b.matches.slice(0, 60).map(m => `<div class="panel"${dups.has(m.id) ? ' style="border-color:var(--gold)"' : ""}>${dups.has(m.id) ? '<div class="note" style="color:var(--gold)">⚠ Possible duplicate report</div>' : ""}
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${m.result === "win" ? "🏆 WIN" : "LOSS"} · ${esc(m.mode || "Match")}${m.map ? " · " + esc(m.map) : ""}</b><span class="note">${new Date(m.timestamp).toLocaleDateString()}</span></div>
       <div class="note">MVP <b class="mvp">${esc(m.mvp)}</b> · reported by ${esc(m.reporter || "crew")}${m.rolled ? " · 🎲 rolled" : ""}</div>
       ${resultRows(m.players.slice(0, 4))}
-      <div class="btns" style="margin-top:8px"><button class="btn sm" data-share="${m.id}">⤴ Share</button>${m.screenshot ? `<a class="btn sm" href="${esc(m.screenshot)}" target="_blank" rel="noopener">🖼 Screenshot</a>` : ""}${S.admin ? `<button class="btn sm danger" data-delm="${m.id}">Delete</button>` : ""}</div></div>`).join("")}</div>`;
+      <div class="btns" style="margin-top:8px"><button class="btn sm" data-share="${m.id}">⤴ Share</button>${m.screenshot ? `<a class="btn sm" href="${esc(m.screenshot)}" target="_blank" rel="noopener">🖼 Screenshot</a>` : ""}${S.admin ? `<button class="btn sm" data-editm="${m.id}">✎ Players</button><button class="btn sm danger" data-delm="${m.id}">Delete</button>` : ""}</div>
+      <div class="hidden" data-edbox="${m.id}">${m.players.map(p => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px"><span>${esc(p.name)} <span class="note">${fmt(p.score)} pts</span></span><span class="btns"><button class="btn sm" data-mfix="${esc(p.name)}" data-mid="${m.id}">⚙ Merge</button><button class="btn sm danger" data-mrm="${esc(p.name)}" data-mid="${m.id}">✕</button></span></div>`).join("")}</div></div>`).join("")}</div>
+      <div class="panel hidden" id="fixPanel"></div>`;
     $$("[data-share]", out).forEach(bt => bt.onclick = () => { const m = b.matches.find(x => x.id === bt.dataset.share); showMatchResult(m); });
     $$("[data-delm]", out).forEach(bt => bt.onclick = async () => {
       if (bt.dataset.sure !== "1") { bt.dataset.sure = "1"; bt.textContent = "Tap again to delete"; return; }
       try { await api("deleteMatch", { id: bt.dataset.delm }); toast("Match deleted"); loadBoard(true); } catch (e) { toast(e.message); }
     });
+    $$("[data-editm]", out).forEach(bt => bt.onclick = () => $(`[data-edbox="${bt.dataset.editm}"]`, out).classList.toggle("hidden"));
+    $$("[data-mrm]", out).forEach(bt => bt.onclick = async () => {
+      if (bt.dataset.sure !== "1") { bt.dataset.sure = "1"; bt.textContent = "Remove?"; return; }
+      await adminEdit({ op: "remove", name: bt.dataset.mrm, matchId: bt.dataset.mid }, `${bt.dataset.mrm} removed from that match`);
+    });
+    const allNames = aggregate(b.matches).map(a => a.name);
+    $$("[data-mfix]", out).forEach(bt => bt.onclick = () => openFix(bt.dataset.mfix, allNames, bt.dataset.mid));
   } else {
     const a = (seasonsData && seasonsData.archive) || [];
     out.innerHTML = a.length ? `<div class="grid2">${a.map(s => `<div class="panel stripe"><h2 class="gold" style="font-size:22px">${esc(s.name)}</h2>
@@ -501,6 +528,46 @@ function renderBoard() {
       <p class="note">${s.matches || 0} matches${s.end ? " · ended " + new Date(s.end).toLocaleDateString() : ""}</p></div>`).join("")}</div>`
       : `<div class="empty">No finished seasons yet. When High Command starts a new season, the champion and MVP land here.</div>`;
   }
+}
+/* --- High Command scoreboard cleanup --- */
+function findDups(matches) {
+  const sig = m => [m.result, m.mode, m.map, m.players.map(p => normTag(p.name) + ":" + p.elims + "/" + p.deaths).sort().join(",")].join("|");
+  const seen = {}, d = new Set();
+  matches.forEach(m => {
+    const k = sig(m), t = new Date(m.timestamp).getTime();
+    (seen[k] || []).forEach(o => { if (Math.abs(o.t - t) < 6 * 3600e3) { d.add(o.id); d.add(m.id); } });
+    (seen[k] = seen[k] || []).push({ id: m.id, t });
+  });
+  return d;
+}
+async function adminEdit(q, msg) {
+  try { const r = await api("editPlayers", { season: (boardData && boardData.season) || "", ...q }); toast(msg + (r.changed > 1 ? ` (${r.changed} matches)` : "")); await loadBoard(true); }
+  catch (e) { toast(e.message); }
+}
+function openFix(name, names, matchId) {
+  const fp = $("#fixPanel"); if (!fp) return;
+  const others = names.filter(n => n.toLowerCase() !== name.toLowerCase());
+  fp.classList.remove("hidden");
+  fp.innerHTML = `<div class="label">Fix ${esc(name)}${matchId ? " (this match only)" : " (whole season)"}</div>
+    <div class="row2"><select id="fixTo">${others.map(n => `<option>${esc(n)}</option>`).join("")}<option value="__new">Type a new name…</option></select>
+      <button class="btn gold" id="fixMerge">Merge into</button></div>
+    <input id="fixNew" class="hidden" placeholder="Correct gamertag" maxlength="32" style="margin-top:8px">
+    <div class="btns" style="margin-top:10px">${matchId ? "" : `<button class="btn danger" id="fixRemove">Remove from scoreboard</button>`}<button class="btn" id="fixClose">Cancel</button></div>
+    <p class="note">Merge combines duplicate names into one player. If both names are in the same match, the higher score is kept so nobody counts twice.</p>`;
+  fp.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("#fixTo").onchange = () => $("#fixNew").classList.toggle("hidden", $("#fixTo").value !== "__new");
+  if (!others.length) { $("#fixTo").value = "__new"; $("#fixNew").classList.remove("hidden"); }
+  $("#fixClose").onclick = () => fp.classList.add("hidden");
+  $("#fixMerge").onclick = () => {
+    const to = $("#fixTo").value === "__new" ? $("#fixNew").value.trim() : $("#fixTo").value;
+    if (!to) { toast("Pick or type the name to merge into"); return; }
+    adminEdit({ op: "rename", name, to, matchId: matchId || "" }, `${name} merged into ${to}`);
+  };
+  const rm = $("#fixRemove");
+  if (rm) rm.onclick = () => {
+    if (rm.dataset.sure !== "1") { rm.dataset.sure = "1"; rm.textContent = `Tap again: remove ${name} from every match this season`; return; }
+    adminEdit({ op: "remove", name }, `${name} removed from the scoreboard`);
+  };
 }
 function initBoard() {
   seg($("#boardSeg"), () => boardData && renderBoard());
