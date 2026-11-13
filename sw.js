@@ -1,6 +1,6 @@
 // OWC Crew Hub - offline support.
 // Bump VERSION whenever you upload new app files so installed copies update.
-const VERSION = "owc-hub-v1";
+const VERSION = "owc-hub-v2";
 const SHELL = ["./", "index.html", "app.js", "data.js", "config.js", "manifest.webmanifest",
   "icons/emblem.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 

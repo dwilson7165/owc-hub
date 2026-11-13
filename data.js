@@ -2,7 +2,7 @@
    Update this file when THE FINALS changes (or ask Claude to). */
 window.OWC_DATA = {
   dataVersion: "12.3.0",
-  dataNote: "Updated through patch 12.3.0 (Nov 12, 2026). Tiers are an early Season 12 list (patch 12.0, Oct 21) from a third-party site; patches 12.1 to 12.3 changed some items since, flagged in Intel.",
+  dataNote: "Updated through patch 12.3.0 (Nov 12, 2026). Weapon stats: THE FINALS Wiki and community stat databases. Tiers are an early Season 12 list (patch 12.0, Oct 21) from a third-party site; patches 12.1 to 12.3 changed some items since, flagged in Intel.",
 
   season: {
     name: "Season 12 · PRIME TIME",
@@ -174,21 +174,21 @@ window.OWC_DATA = {
     "93R": { type: "Burst pistol", dmg: 24, rpm: 220, dps: 88, mag: 27, ttk: 1.19 },
     "FAMAS": { type: "Burst rifle", dmg: 24, rpm: null, dps: null, mag: 27, ttk: 1.20 },
     "Chimera-XB": { type: "Crossbow", dmg: 48, rpm: 280, dps: 224, mag: null, ttk: null, s12: "12.0: 45 → 47, 12.2: 47 → 48 and 260 → 280 RPM" },
-    "BFR Titan": { type: "Long-range rifle", dmg: 95, s12: "12.0: dmg 90 → 95, faster reload" },
-    "Pike-556": { type: "Marksman", dmg: 50, s12: "12.0: dmg 49 → 50, 12.1: headshot x1.75 → x1.5" },
-    "R .357": { type: "Revolver", dmg: 76, s12: "12.0: dmg 74 → 76" },
-    "SR-84": { type: "Sniper", dmg: 122, s12: "12.0: dmg 118 → 122" },
-    "MGL32": { type: "Grenade launcher", dmg: 97, s12: "12.0: dmg 83 → 97, Blast Waves" },
-    "Flamethrower": { type: "Flamethrower", s12: "12.3: impact 30 → 26, heat per tick 50 → 25" },
-    "Cerberus 12GA": { type: "Shotgun", s12: "12.3: sets targets burning much faster" },
-    "Dagger": { type: "Melee", s12: "12.0: backstab 85 → 90 and faster, lunge 5 → 4.25m" },
-    "Sword": { type: "Melee", s12: "12.0: damage 71/110 → 65/100, lunge 4.25 → 4m" },
-    "Dual Blades": { type: "Melee", s12: "12.0: 37/57 → 39/60, Cross Slash 91/140 → 100/155" },
-    "Riot Shield": { type: "Melee", s12: "12.0: 60/86 → 63/90, bigger hitboxes, longer Shield Bash" },
-    "Sledgehammer": { type: "Melee", s12: "12.0: lunge 5 → 4.5m" },
-    "Spear": { type: "Melee", s12: "12.0: lunge 6.5 → 5.75m, narrower hitbox" },
-    "Throwing Knives": { type: "Throwing" }, "Recurve Bow": { type: "Bow" }, "SH1900": { type: "Shotgun" }, "M26 Matter": { type: "Shotgun" },
-    "CL-40": { type: "Grenade launcher", s12: "12.0: gained Blast Waves" }, "M134 Minigun": { type: "Minigun" }
+    "BFR Titan": { type: "Long-range revolver", dmg: 95, rpm: 71, dps: 112, mag: 5, ttk: null, s12: "12.0: dmg 90 → 95, faster reload" },
+    "Pike-556": { type: "Marksman", dmg: 50, rpm: 200, dps: 167, mag: 12, ttk: 1.20, s12: "12.0: dmg 49 → 50, 12.1: headshot x1.75 → x1.5" },
+    "R .357": { type: "Revolver", dmg: 76, rpm: 140, dps: 177, mag: 6, ttk: 1.29, s12: "12.0: dmg 74 → 76 (headshot 152)" },
+    "SR-84": { type: "Sniper", dmg: 122, rpm: 45, dps: 92, mag: 6, ttk: 2.67, s12: "12.0: dmg 118 → 122 (headshot 244)" },
+    "MGL32": { type: "Grenade launcher", dmg: 97, rpm: 90, dps: 146, mag: 6, ttk: 1.33, s12: "12.0: dmg 83 → 97, Blast Waves" },
+    "Flamethrower": { type: "Flamethrower", dmg: 26, rpm: 170, dps: 74, mag: 30, ttk: null, s12: "12.3: impact 30 → 26, heat per tick 50 → 25", note: "Plus burn damage over time" },
+    "Cerberus 12GA": { type: "Shotgun", dmg: 117, rpm: 100, dps: 195, mag: 3, ttk: 1.20, s12: "12.3: sets targets burning much faster", note: "13 pellets × 9 damage, plus burn" },
+    "Dagger": { type: "Melee", dmg: 70, note: "Precise hit 70 (glancing 49). Backstab 340.", s12: "12.0: backstab faster, lunge 5 → 4.25m" },
+    "Sword": { type: "Melee", dmg: 100, note: "Precise hit 100 (glancing 65). Lunge attack 120.", s12: "12.0: damage 71/110 → 65/100, lunge 4.25 → 4m" },
+    "Dual Blades": { type: "Melee", dmg: 60, note: "Precise hit 60 (glancing 39). Cross Slash 155 (glancing 100).", s12: "12.0: 37/57 → 39/60, Cross Slash 91/140 → 100/155" },
+    "Riot Shield": { type: "Melee", dmg: 90, note: "Precise hit 90 (glancing 63). Shield Bash 50.", s12: "12.0: 60/86 → 63/90, bigger hitboxes, longer Shield Bash" },
+    "Sledgehammer": { type: "Melee", dmg: 120, note: "Precise hit 120 (glancing 90). Overhead 200 (glancing 150).", s12: "12.0: lunge 5 → 4.5m" },
+    "Spear": { type: "Melee", dmg: 82, note: "Precise hit 82 (glancing 57). Spin attack 75, 125, then 150.", s12: "12.0: lunge 6.5 → 5.75m, narrower hitbox" },
+    "Throwing Knives": { type: "Throwing", dmg: 60, rpm: 107, dps: 107, ttk: 1.56, note: "Charged throw 140" }, "Recurve Bow": { type: "Bow", dmg: 126, rpm: 78, dps: 164, ttk: 1.25, note: "60 to 126 depending on draw; 2 charged shots down a Medium" }, "SH1900": { type: "Shotgun", dmg: 180, rpm: 80, dps: 240, mag: 2, ttk: 0.75, note: "15 pellets × 12 damage" }, "M26 Matter": { type: "Shotgun", dmg: 121, rpm: 84, dps: 169, mag: 8, ttk: 1.43, note: "11 pellets × 11 damage" },
+    "CL-40": { type: "Grenade launcher", dmg: 105, rpm: 73, dps: 128, mag: 5, ttk: 1.60, s12: "12.0: gained Blast Waves", note: "Direct hit 105; hurts you if too close" }, "M134 Minigun": { type: "Minigun", dmg: 11, rpm: 1500, dps: 275, mag: 300, ttk: 0.88, note: "Needs spin-up" }
   },
 
   /* [cooldown seconds, what it does (Season 12 values)] */
