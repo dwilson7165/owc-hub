@@ -28,7 +28,7 @@ var DEFAULT_CONFIG = {
   w_elims: 100, w_assists: 50, w_deaths: -40, w_revives: 75, w_objective: 150, w_damagePer10: 1,
   bonus_win: 200, bonus_rolled: 150,
   grade_S: 2200, grade_A: 1600, grade_B: 1000, grade_C: 500,
-  geminiModel: 'gemini-flash-latest',
+  geminiModel: 'gemini-3.8-flash, gemini-3.5-flash-lite',
   discordPostMatches: 'yes', discordPostPatches: 'yes', discordPostRedeems: 'yes'
 };
 
@@ -126,6 +126,34 @@ function route_(action, p) {
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
   }
+}
+
+/* Calls Gemini. Config "geminiModel" can list several models separated by commas:
+   if one is busy (503) or rate-limited (429), it waits briefly, retries, then moves to the next. */
+function gemini_(body) {
+  var key = prop_('GEMINI_KEY');
+  if (!key) throw new Error('Screenshot reader is not set up yet (missing GEMINI_KEY). You can still type stats in.');
+  var models = String(config_().geminiModel || 'gemini-3.8-flash').split(',').map(function (m) { return m.trim(); }).filter(String);
+  var last = '';
+  for (var i = 0; i < models.length; i++) {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent', {
+        method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
+        payload: JSON.stringify(body)
+      });
+      var code = res.getResponseCode();
+      if (code === 200) {
+        var d = JSON.parse(res.getContentText());
+        var parts = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+        return { model: models[i], text: parts.map(function (x) { return x.text || ''; }).join('').trim() };
+      }
+      last = models[i] + ' ' + code + ': ' + res.getContentText().slice(0, 160);
+      Logger.log('Gemini ' + last);
+      if (code === 429 || code >= 500) { if (attempt === 0) Utilities.sleep(2000); continue; }
+      break; // other errors (bad key, bad model name): try the next model
+    }
+  }
+  throw new Error('Gemini is busy right now. Try again in a minute, or type the stats in. (' + last.slice(0, 80) + ')');
 }
 
 function json_(o) {
@@ -240,8 +268,6 @@ function publicConfig_() {
 /* =================== SCREENSHOT READING (Gemini) =================== */
 
 function readScreenshot_(p) {
-  var key = prop_('GEMINI_KEY');
-  if (!key) throw new Error('Screenshot reader is not set up yet (missing GEMINI_KEY). You can still type stats in.');
   var m = String(p.image || '').match(/^data:(image\/\w+);base64,(.+)$/);
   if (!m) throw new Error('No image received.');
   var prompt =
@@ -251,19 +277,10 @@ function readScreenshot_(p) {
     '"elims":number,"assists":number,"deaths":number,"revives":number,"damage":number,"objective":number}]}. ' +
     'elims = eliminations/kills. objective = objective plays such as cashouts, steals, vault/objective score count (use 0 if not shown). ' +
     'Use 0 for any stat that is not visible. Do not invent players. Keep names exactly as written.';
-  var model = config_().geminiModel || 'gemini-flash-latest';
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-    headers: { 'x-goog-api-key': key },
-    payload: JSON.stringify({
-      contents: [{ parts: [{ inline_data: { mime_type: m[1], data: m[2] } }, { text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
-    })
-  });
-  if (res.getResponseCode() !== 200) throw new Error('Screenshot reader error (' + res.getResponseCode() + '). Type the stats in, or try again.');
-  var data = JSON.parse(res.getContentText());
-  var text = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-  text = text.map(function (x) { return x.text || ''; }).join('');
+  var text = gemini_({
+    contents: [{ parts: [{ inline_data: { mime_type: m[1], data: m[2] } }, { text: prompt }] }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+  }).text;
   var parsed = JSON.parse(text.replace(/^```json|```$/g, '').trim());
   parsed.players = (parsed.players || []).slice(0, 16).map(function (pl) {
     return { name: clean_(pl.name, 32), team: clean_(pl.team, 20), elims: num_(pl.elims), assists: num_(pl.assists),
@@ -495,43 +512,25 @@ function excerpt_(plain) {
 
 function summarize_(title, contents) {
   var plain = contents.replace(/\[[^\]]*\]/g, ' ').replace(/\{[^}]*\}/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  var key = prop_('GEMINI_KEY');
-  if (key && plain.length > 40) {
+  if (prop_('GEMINI_KEY') && plain.length > 40) {
     try {
-      var t0 = Date.now();
-      var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' +
-        (config_().geminiModel || 'gemini-flash-latest') + ':generateContent', {
-        method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
-        payload: JSON.stringify({ contents: [{ parts: [{ text:
-          'Summarize these THE FINALS game update notes for a casual squad in 3 short bullet points, in your own words ' +
-          '(no quotes, max 45 words total). Start each bullet with "• ".\nTitle: ' + title + '\n\n' + plain.slice(0, 4000) }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 400 } })
-      });
-      var code = res.getResponseCode();
-      if (code === 200) {
-        var d = JSON.parse(res.getContentText());
-        var t = (((d.candidates || [])[0] || {}).content || {}).parts || [];
-        t = t.map(function (x) { return x.text || ''; }).join('').trim();
-        if (t) return t;
-      }
-      Logger.log('Gemini summary got ' + code + ' after ' + (Date.now() - t0) + ' ms: ' + res.getContentText().slice(0, 200));
-    } catch (e) { Logger.log('Gemini summary error: ' + e); }
+      var t = gemini_({ contents: [{ parts: [{ text:
+        'Summarize these THE FINALS game update notes for a casual squad in 3 short bullet points, in your own words ' +
+        '(no quotes, max 45 words total). Start each bullet with "• ".\nTitle: ' + title + '\n\n' + plain.slice(0, 4000) }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 400 } }).text;
+      if (t) return t;
+    } catch (e) { Logger.log('Summary fell back to Embark text: ' + e.message); }
   }
   return excerpt_(plain);
 }
 
 /** Run this to check your Gemini key: it logs how long Gemini takes and what it answers. */
 function testGemini() {
-  var key = prop_('GEMINI_KEY');
-  if (!key) { Logger.log('No GEMINI_KEY in Script Properties.'); return; }
-  var model = config_().geminiModel || 'gemini-flash-latest';
   var t0 = Date.now();
-  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
-    method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
-    payload: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OWC online' }] }] })
-  });
-  Logger.log('Model: ' + model + ' | status ' + res.getResponseCode() + ' | ' + (Date.now() - t0) + ' ms');
-  Logger.log(res.getContentText().slice(0, 600));
+  try {
+    var r = gemini_({ contents: [{ parts: [{ text: 'Reply with exactly: OWC online' }] }] });
+    Logger.log('OK: ' + r.model + ' answered "' + r.text + '" in ' + (Date.now() - t0) + ' ms');
+  } catch (e) { Logger.log('FAILED after ' + (Date.now() - t0) + ' ms: ' + e.message); }
 }
 
 function patches_() {
