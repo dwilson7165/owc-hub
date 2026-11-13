@@ -90,9 +90,11 @@ function mock(action, p) {
     switch (action) {
       case "config": return { ok: true, config: { seasonName: db.season, weights: DEFAULT_W, grades: DEFAULT_G, screenshotReader: true, discord: false, adminSet: true }, rewards };
       case "readScreenshot": return { ok: true, read: { mode: "Cashout", map: "Las Vegas", result: "win", players: [
-        { name: store.get("me", "") || "Wilson", elims: 11, assists: 6, deaths: 4, revives: 3, damage: 6420, objective: 4 },
-        { name: "RiskyBiscuits", elims: 8, assists: 9, deaths: 5, revives: 6, damage: 5210, objective: 3 },
-        { name: "Biogaming128", elims: 14, assists: 3, deaths: 7, revives: 1, damage: 8120, objective: 2 }] } };
+        { name: store.get("me", "") || "Wilson", team: "OWC", elims: 11, assists: 6, deaths: 4, revives: 3, damage: 6420, objective: 4 },
+        { name: "RiskyBiscuits", team: "OWC", elims: 8, assists: 9, deaths: 5, revives: 6, damage: 5210, objective: 3 },
+        { name: "Biogaming128", team: "OWC", elims: 14, assists: 3, deaths: 7, revives: 1, damage: 8120, objective: 2 },
+        { name: "EnemyOne", team: "Team 2", elims: 9, assists: 2, deaths: 8, revives: 0, damage: 5100, objective: 1 },
+        { name: "EnemyTwo", team: "Team 2", elims: 6, assists: 4, deaths: 9, revives: 2, damage: 4300, objective: 0 }] } };
       case "submitMatch": {
         const win = p.result === "win";
         const players = p.players.map(x => { const o = { ...x }; o.score = scoreOf(o, win, p.rolled); o.grade = gradeOf(o.score); return o; }).sort((a, b) => b.score - a.score);
@@ -325,6 +327,32 @@ async function downscale(file, max = 1600, q = 0.85) {
     return c.toDataURL("image/jpeg", q);
   } finally { URL.revokeObjectURL(url); }
 }
+/* --- screenshot: keep only the reporter's squad --- */
+let readAll = [], squadSel = null;
+const normTag = v => String(v || "").toLowerCase().replace(/#\d+$/, "").replace(/[^a-z0-9]/g, "");
+function isMe(name) {
+  const a = normTag(name), b = normTag(S.me);
+  if (!a || !b) return false;
+  return a === b || (b.length >= 4 && a.includes(b)) || (a.length >= 4 && b.includes(a));
+}
+function teamsOf(list) { const t = []; list.forEach(p => { const k = p.team || ""; if (k && !t.includes(k)) t.push(k); }); return t; }
+function mySquad(list) {
+  const me = list.find(p => isMe(p.name)) || list.find(p => p.isYou);
+  if (me && me.team) return me.team;
+  return null;
+}
+function pickSquad(team) {
+  squadSel = team;
+  const list = team === null ? readAll : readAll.filter(p => p.team === team);
+  rows = list.map(p => ({ ...blankRow(p.name), ...p, build: "" }));
+  const bar = $("#squadPick"), teams = teamsOf(readAll);
+  if (!bar) return;
+  if (teams.length < 2) { bar.innerHTML = ""; return; }
+  const mine = mySquad(readAll);
+  bar.innerHTML = `<span class="muted">Squad:</span> ` + teams.map(t => `<button class="btn sm ${t === team ? "purple" : ""}" data-sq="${esc(t)}">${t === mine ? "⭐ " : ""}${esc(t)}</button>`).join("") +
+    ` <button class="btn sm ${team === null ? "purple" : ""}" data-sq="">All teams</button>`;
+  $$("[data-sq]", bar).forEach(b => b.onclick = () => { pickSquad(b.dataset.sq || null); renderRows(); });
+}
 function renderRows() {
   const L = $("#plList");
   if (!rows.length) rows.push(blankRow(S.me));
@@ -366,7 +394,7 @@ async function submitReport() {
       players: rows.filter(r => r.name.trim()), screenshot: shotData, card });
     celebrate(r.match.result === "win" ? "VICTORY REPORTED!" : "REPORT FILED!");
     showMatchResult(r.match);
-    rows = []; shotData = ""; $("#shotPrev").classList.add("hidden"); $("#shotRead").classList.add("hidden"); renderRows();
+    rows = []; shotData = ""; readAll = []; squadSel = null; $("#squadPick").innerHTML = ""; $("#shotPrev").classList.add("hidden"); $("#shotRead").classList.add("hidden"); renderRows();
   } catch (e) { err.textContent = e.message; }
   finally { btn.disabled = false; btn.textContent = "SUBMIT REPORT"; }
 }
@@ -392,12 +420,12 @@ function initReport() {
   $("#shotRead").onclick = async () => {
     const b = $("#shotRead"); b.disabled = true; b.textContent = "Reading…"; $("#shotErr").textContent = "";
     try {
-      const r = (await api("readScreenshot", { image: shotData })).read || {};
-      if (r.players && r.players.length) rows = r.players.map(p => ({ ...blankRow(p.name), ...p, build: "" }));
+      const r = (await api("readScreenshot", { image: shotData, me: S.me })).read || {};
+      if (r.players && r.players.length) { readAll = r.players; pickSquad(mySquad(readAll)); }
       const md = bestMatch(D.modes, r.mode), mp = bestMatch(D.maps, r.map);
       if (md) $("#rMode").value = md; if (mp) $("#rMap").value = mp;
       if (r.result) $(`#resSeg button[data-v=${r.result === "win" ? "win" : "loss"}]`).click();
-      renderRows(); toast("Stats read. Double-check them before submitting.");
+      renderRows(); toast(squadSel === null ? "Stats read. Remove anyone not in your squad, then double-check." : "Your squad's stats are in. Double-check before submitting.");
     } catch (e) { $("#shotErr").textContent = e.message; }
     finally { b.disabled = false; b.textContent = "🔎 Read stats"; }
   };

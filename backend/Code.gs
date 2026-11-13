@@ -270,11 +270,17 @@ function publicConfig_() {
 function readScreenshot_(p) {
   var m = String(p.image || '').match(/^data:(image\/\w+);base64,(.+)$/);
   if (!m) throw new Error('No image received.');
+  var me = clean_(p.me, 32);
   var prompt =
     'This is an end-of-match results/scoreboard screenshot from the video game THE FINALS. ' +
-    'Read every player row you can see. Return ONLY JSON with this shape: ' +
-    '{"mode":string|null,"map":string|null,"result":"win"|"loss"|null,"players":[{"name":string,"team":string|null,' +
+    'Read every player row you can see, on every team. Players are grouped by team (squad): give every player on the same team ' +
+    'the SAME "team" label, using the team name shown on screen, or "Team 1", "Team 2"... in top-to-bottom order if no name is shown. ' +
+    'Set "isYou": true only on the row the game highlights as the local player (usually a brighter or colored row), false otherwise. ' +
+    (me ? 'The person uploading is "' + me + '" (their in-game name may add a #number or differ slightly in case). ' : '') +
+    'Return ONLY JSON with this shape: ' +
+    '{"mode":string|null,"map":string|null,"result":"win"|"loss"|null,"players":[{"name":string,"team":string,"isYou":boolean,' +
     '"elims":number,"assists":number,"deaths":number,"revives":number,"damage":number,"objective":number}]}. ' +
+    '"result" is from the uploader\'s team point of view. ' +
     'elims = eliminations/kills. objective = objective plays such as cashouts, steals, vault/objective score count (use 0 if not shown). ' +
     'Use 0 for any stat that is not visible. Do not invent players. Keep names exactly as written.';
   var text = gemini_({
@@ -282,8 +288,8 @@ function readScreenshot_(p) {
     generationConfig: { responseMimeType: 'application/json', temperature: 0 }
   }).text;
   var parsed = JSON.parse(text.replace(/^```json|```$/g, '').trim());
-  parsed.players = (parsed.players || []).slice(0, 16).map(function (pl) {
-    return { name: clean_(pl.name, 32), team: clean_(pl.team, 20), elims: num_(pl.elims), assists: num_(pl.assists),
+  parsed.players = (parsed.players || []).slice(0, 48).map(function (pl) {
+    return { name: clean_(pl.name, 32), team: clean_(pl.team, 20), isYou: pl.isYou === true, elims: num_(pl.elims), assists: num_(pl.assists),
              deaths: num_(pl.deaths), revives: num_(pl.revives), damage: num_(pl.damage), objective: num_(pl.objective) };
   });
   return { read: parsed };
