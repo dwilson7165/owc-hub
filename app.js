@@ -141,7 +141,9 @@ const S = { me: store.get("me", ""), cfg: null, rewards: [], seasonName: "", adm
 
 /* ---------------- tabs ---------------- */
 const loaders = {};
+let curTab = "roll";
 function showTab(id) {
+  curTab = id;
   $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
   $$("section.tab").forEach(s => s.classList.toggle("on", s.id === "tab-" + id));
   const b = $(`#nav button[data-tab="${id}"]`); if (b) b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
@@ -392,6 +394,7 @@ async function submitReport() {
     const card = await makeCard("match", { ...meta, players: list, season: S.seasonName }, "wide").then(c => c.toDataURL("image/png")).catch(() => "");
     const r = await api("submitMatch", { reporter: S.me || list[0].name, ...meta, rolled: $("#rRolled").checked,
       players: rows.filter(r => r.name.trim()), screenshot: shotData, card });
+    boardData = null;
     celebrate(r.match.result === "win" ? "VICTORY REPORTED!" : "REPORT FILED!");
     showMatchResult(r.match);
     rows = []; shotData = ""; readAll = []; squadSel = null; $("#squadPick").innerHTML = ""; $("#shotPrev").classList.add("hidden"); $("#shotRead").classList.add("hidden"); renderRows();
@@ -443,7 +446,7 @@ function renderHowGrade() {
 /* =========================================================
    SCOREBOARD
    ========================================================= */
-let boardData = null, seasonsData = null;
+let boardData = null, seasonsData = null, boardAt = 0;
 function aggregate(matches) {
   const t = {};
   matches.forEach(m => m.players.forEach(p => {
@@ -461,7 +464,7 @@ async function loadBoard(force) {
     try {
       const sel = $("#seasonSel").value || "";
       const [b, s] = await Promise.all([api("scoreboard", { season: sel }), seasonsData && !force ? Promise.resolve(seasonsData) : api("seasons")]);
-      boardData = b; seasonsData = s;
+      boardData = b; seasonsData = s; boardAt = Date.now();
       const opts = [s.current.name, ...s.archive.map(a => a.name)];
       $("#seasonSel").innerHTML = opts.map(o => `<option ${o === b.season ? "selected" : ""}>${esc(o)}</option>`).join("");
     } catch (e) { out.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
@@ -503,7 +506,7 @@ function initBoard() {
   seg($("#boardSeg"), () => boardData && renderBoard());
   $("#boardRefresh").onclick = () => loadBoard(true);
   $("#seasonSel").onchange = () => loadBoard(true);
-  loaders.board = () => loadBoard(false);
+  loaders.board = () => loadBoard(!boardData || Date.now() - boardAt > 60e3);
 }
 
 /* =========================================================
@@ -899,8 +902,38 @@ async function loadConfig() {
     renderHowGrade(); livePreview();
   } catch (e) { toast("Can't reach OWC Command: " + e.message); renderHowGrade(); }
 }
+/* ---------------- refresh: stats + app updates ---------------- */
+async function refreshAll() {
+  const b = $("#refreshBtn"); if (b.classList.contains("spin")) return;
+  b.classList.add("spin");
+  let updated = false;
+  try {
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update().catch(() => {});
+        const nw = reg.installing || reg.waiting;
+        if (nw) {
+          updated = true;
+          toast("New app version found. Updating…");
+          await new Promise(res => { if (nw.state === "activated") return res(); nw.addEventListener("statechange", () => nw.state === "activated" && res()); setTimeout(res, 6000); });
+          location.reload(); return;
+        }
+      }
+    }
+    boardData = null; seasonsData = null;
+    await loadConfig();
+    const tab = curTab;
+    if (tab === "board") await loadBoard(true);
+    else if (tab === "intel") await loadPatches(false);
+    else if (loaders[tab]) await loaders[tab]();
+    if (!updated) toast("Stats refreshed ✓");
+  } catch (e) { toast("Refresh failed: " + e.message); }
+  finally { b.classList.remove("spin"); }
+}
 function init() {
   if (!API) $("#demoBanner").classList.remove("hidden");
+  $("#refreshBtn").onclick = refreshAll;
   initRoll(); initReport(); initBoard(); initCrew(); initMusic(); initInstall();
   seg($("#armSeg"), renderArmory); renderArmory("Light");
   renderIntelStatic();

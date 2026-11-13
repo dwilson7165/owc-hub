@@ -49,6 +49,7 @@ input:focus,select:focus{outline:2px solid var(--gold);outline-offset:0}
 .onair.off{color:var(--muted)} .onair.off i{background:var(--muted);box-shadow:none;animation:none}
 @keyframes blink{50%{opacity:.25}}
 .iconbtn{width:42px;height:42px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--gold-hi);font-size:18px;flex:none}
+.iconbtn.spin{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .iconbtn.on{background:var(--gold);color:#111;border-color:var(--gold-hi)}
 nav{display:flex;gap:6px;overflow-x:auto;padding:4px 14px 10px;max-width:1100px;margin:0 auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
@@ -227,6 +228,7 @@ footer{color:#5d5b56;font:600 12px var(--body);text-align:center;margin-top:24px
       <h1 class="gold">OWC Crew Hub</h1>
       <div class="onair" id="liveDot"><i></i><span id="liveTxt">ON AIR · ARENA FEED</span></div>
     </div>
+    <button class="iconbtn" id="refreshBtn" title="Refresh stats" aria-label="Refresh stats and check for app updates">↻</button>
     <button class="iconbtn" id="musicBtn" title="Music" aria-label="Play or pause music">♫</button>
   </div>
   <nav id="nav">
