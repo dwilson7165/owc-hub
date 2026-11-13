@@ -446,7 +446,7 @@ function checkPatches() {
   var start = Date.now();
   var fresh = items.filter(function (it) { return !known[String(it.gid)]; }).reverse(); // oldest first
   for (var i = 0; i < fresh.length; i++) {
-    if (Date.now() - start > 200000) break;           // stay well under Google's 6-minute limit; the rest come next hour
+    if (Date.now() - start > 120000) break;           // stay well under Google's 6-minute limit; the rest come next hour
     var it = fresh[i];
     var summary = summarize_(it.title, String(it.contents || ''));
     sh.appendRow([String(it.gid), new Date(it.date * 1000).toISOString(), it.title, it.url, summary]);
@@ -475,44 +475,63 @@ function fixPatches() {
   items.forEach(function (it) { byGid[String(it.gid)] = it; });
   var start = Date.now(), fixed = 0;
   rows_('Patches').forEach(function (r) {
-    if (Date.now() - start > 240000) return;
+    if (Date.now() - start > 120000) return;
     if (String(r.summary).indexOf('New update posted') !== 0) return;
     var it = byGid[String(r.gid)];
     if (!it) return;
     var s = summarize_(it.title, String(it.contents || ''));
     if (s.indexOf('New update posted') !== 0) { sh.getRange(r._row, 5).setValue(s); fixed++; }
-    Utilities.sleep(1500);
   });
   Logger.log('Patches tab cleaned. Summaries filled in: ' + fixed + '. Run again if some still say "New update posted".');
 }
 
+function excerpt_(plain) {
+  var t = plain.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
+  if (t.length <= 260) return t || 'New update posted. Tap to read the full notes.';
+  var cut = t.slice(0, 260);
+  var dot = cut.lastIndexOf('. ');
+  return (dot > 120 ? cut.slice(0, dot + 1) : cut + '…');
+}
+
 function summarize_(title, contents) {
-  var plain = contents.replace(/\[[^\]]*\]/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  var plain = contents.replace(/\[[^\]]*\]/g, ' ').replace(/\{[^}]*\}/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   var key = prop_('GEMINI_KEY');
   if (key && plain.length > 40) {
-    for (var attempt = 0; attempt < 2; attempt++) {
-      try {
-        var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' +
-          (config_().geminiModel || 'gemini-flash-latest') + ':generateContent', {
-          method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
-          payload: JSON.stringify({ contents: [{ parts: [{ text:
-            'Summarize these THE FINALS game update notes for a casual squad in 3 short bullet points, in your own words ' +
-            '(no quotes, max 45 words total). Start each bullet with "• ".\nTitle: ' + title + '\n\n' + plain.slice(0, 6000) }] }],
-            generationConfig: { temperature: 0.2 } })
-        });
-        var code = res.getResponseCode();
-        if (code === 200) {
-          var d = JSON.parse(res.getContentText());
-          var t = (((d.candidates || [])[0] || {}).content || {}).parts || [];
-          t = t.map(function (x) { return x.text || ''; }).join('').trim();
-          if (t) return t;
-        }
-        Logger.log('Gemini summary attempt ' + (attempt + 1) + ' got ' + code + ': ' + res.getContentText().slice(0, 200));
-        if (code === 429 || code >= 500) Utilities.sleep(4000); else break;
-      } catch (e) { Logger.log('Gemini summary error: ' + e); }
-    }
+    try {
+      var t0 = Date.now();
+      var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' +
+        (config_().geminiModel || 'gemini-flash-latest') + ':generateContent', {
+        method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
+        payload: JSON.stringify({ contents: [{ parts: [{ text:
+          'Summarize these THE FINALS game update notes for a casual squad in 3 short bullet points, in your own words ' +
+          '(no quotes, max 45 words total). Start each bullet with "• ".\nTitle: ' + title + '\n\n' + plain.slice(0, 4000) }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 400 } })
+      });
+      var code = res.getResponseCode();
+      if (code === 200) {
+        var d = JSON.parse(res.getContentText());
+        var t = (((d.candidates || [])[0] || {}).content || {}).parts || [];
+        t = t.map(function (x) { return x.text || ''; }).join('').trim();
+        if (t) return t;
+      }
+      Logger.log('Gemini summary got ' + code + ' after ' + (Date.now() - t0) + ' ms: ' + res.getContentText().slice(0, 200));
+    } catch (e) { Logger.log('Gemini summary error: ' + e); }
   }
-  return 'New update posted. Tap to read the full notes.';
+  return excerpt_(plain);
+}
+
+/** Run this to check your Gemini key: it logs how long Gemini takes and what it answers. */
+function testGemini() {
+  var key = prop_('GEMINI_KEY');
+  if (!key) { Logger.log('No GEMINI_KEY in Script Properties.'); return; }
+  var model = config_().geminiModel || 'gemini-flash-latest';
+  var t0 = Date.now();
+  var res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { 'x-goog-api-key': key },
+    payload: JSON.stringify({ contents: [{ parts: [{ text: 'Reply with exactly: OWC online' }] }] })
+  });
+  Logger.log('Model: ' + model + ' | status ' + res.getResponseCode() + ' | ' + (Date.now() - t0) + ' ms');
+  Logger.log(res.getContentText().slice(0, 600));
 }
 
 function patches_() {
